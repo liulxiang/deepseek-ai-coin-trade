@@ -2,6 +2,8 @@
 
 一个基于DeepSeek AI的加密货币交易模拟器，允许用户测试交易策略并模拟真实市场条件下的交易。
 
+![系统界面](home.png)
+
 ## 功能特点
 
 - 实时加密货币市场数据获取
@@ -12,29 +14,32 @@
 - 支持多币种交易（Bitcoin, Ethereum, Binance Coin, Solana, Ripple, Dogecoin）
 - 定时数据更新（每30分钟自动获取最新市场数据）
 - 北京时间显示支持
+- 账户总价值历史追踪
+- 持仓分布可视化
+- 价格趋势图分析
 
 ## 技术栈
 
-- **后端**: Node.js + Express.js
-- **前端**: HTML5 + CSS3 + Vanilla JavaScript
-- **数据库**: SQLite3
-- **AI服务**: DeepSeek AI API
-- **实时通信**: WebSocket
-- **测试框架**: Jest
-- **构建工具**: npm
+- **后端框架**: Spring Boot 2.7.18
+- **前端技术**: HTML5, CSS3, JavaScript, Chart.js
+- **数据库**: MySQL 8.0+
+- **AI服务**: DeepSeek API
+- **市场数据**: Binance API
+- **构建工具**: Maven 3.6+
+- **Java版本**: JDK 8+
 
 ## 系统架构
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌──────────────────┐
 │   前端界面      │◄──►│   API服务层      │◄──►│   数据存储层     │
-│  (public/)      │    │  (src/routes/)   │    │  (SQLite数据库)  │
+│  (Thymeleaf)    │    │  (Controllers)   │    │   (MySQL数据库)  │
 └─────────────────┘    └──────────────────┘    └──────────────────┘
                               │                         ▲
                               ▼                         │
                     ┌──────────────────┐               │
                     │   业务逻辑层     │◄──────────────┘
-                    │  (src/services/) │    外部API调用
+                    │  (Services)      │    外部API调用
                     └──────────────────┘    (Binance API)
                               │
                               ▼
@@ -47,111 +52,98 @@
 ## 安装和设置
 
 ### 环境要求
-- Node.js >= 14.0.0
-- npm >= 6.0.0
+
+- Java JDK 8 或更高版本
+- Maven 3.6 或更高版本
+- MySQL 8.0 或更高版本
+- 网络连接（用于访问Binance API和DeepSeek AI API）
 
 ### 安装步骤
 
-1. 克隆项目:
+1. 克隆项目代码:
    ```bash
    git clone <repository-url>
-   cd dog_ai
+   cd noodle-deepseek-ai-trade-coin
    ```
 
-2. 安装依赖:
+2. 配置数据库:
+   - 创建MySQL数据库
+   - 在 `src/main/resources/application.yml` 中配置数据库连接信息
+
+3. 配置DeepSeek API密钥:
+   - 在 `src/main/resources/application.yml` 中配置API密钥，或
+   - 通过环境变量 `DEEPSEEK_API_KEY` 设置
+
+4. 编译项目:
    ```bash
-   npm install
+   mvn clean compile
    ```
 
-3. 配置环境变量:
+5. 运行项目:
    ```bash
-   cp .env.example .env
-   ```
-   编辑 `.env` 文件，填写必要的配置信息
-
-4. 启动服务:
-   ```bash
-   # 开发模式
-   npm run dev
-   
-   # 生产模式
-   npm start
+   mvn spring-boot:run
    ```
 
-5. 访问应用:
-   打开浏览器访问 `http://localhost:3001`
+6. 访问应用:
+   打开浏览器访问 `http://localhost:8083`
 
 ## 配置说明
 
-### 环境变量配置
-```env
-# DeepSeek AI 配置
-DEEPSEEK_API_KEY=your_deepseek_api_key_here
-DEEPSEEK_API_URL=https://api.deepseek.com/v1
+### 数据库配置
+在 `src/main/resources/application.yml` 中配置MySQL数据库连接:
 
-# 服务器配置
-PORT=3001
-NODE_ENV=development
-
-# 交易配置
-INITIAL_BALANCE=10000
-TRADING_FEE=0.001
-
-# 代理配置 (可选)
-HTTPS_PROXY=http://proxy.example.com:8080
-HTTP_PROXY=http://proxy.example.com:8080
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/your_database_name?useSSL=false&serverTimezone=Asia/Shanghai
+    username: your_username
+    password: your_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
 ```
 
-### 代理配置
+### DeepSeek AI 配置
+在 `src/main/resources/application.yml` 中配置DeepSeek AI:
 
-如果遇到网络连接问题，可以通过设置代理来解决:
+```yaml
+# DeepSeek AI 配置
+deepseek:
+  api:
+    key: ${DEEPSEEK_API_KEY:sk-1}  # 默认值为sk-1，生产环境应通过环境变量设置
+    url: https://api.deepseek.com/v1
+    model: deepseek-chat
+```
 
-1. 在 `.env` 文件中添加代理配置:
-   ```env
-   HTTPS_PROXY=http://proxy.example.com:8080
-   HTTP_PROXY=http://proxy.example.com:8080
-   ```
+可以通过以下方式设置API密钥：
+1. 修改配置文件中的默认值
+2. 设置环境变量: `export DEEPSEEK_API_KEY=your_actual_api_key`
+3. 在启动时通过JVM参数传递: `-DDEEPSEEK_API_KEY=your_actual_api_key`
 
-2. 或者在启动时设置环境变量:
-   ```bash
-   HTTPS_PROXY=http://proxy.example.com:8080 npm start
-   ```
+### 服务器端口配置
+默认端口为8083，如需修改可在 `application.yml` 中配置:
+
+```yaml
+server:
+  port: 8083
+```
 
 ## 项目结构
 
 ```
-.
-├── public/                 # 前端静态文件
-│   ├── index.html         # 主页面
-│   ├── styles.css         # 样式文件
-│   └── script.js          # 前端JavaScript
-├── src/                   # 后端源代码
-│   ├── config/            # 配置文件
-│   │   ├── app.js         # 应用配置
-│   │   ├── coins.js       # 加密货币配置
-│   │   └── database.js    # 数据库配置
-│   ├── models/            # 数据模型
-│   │   ├── MarketData.js  # 市场数据模型
-│   │   ├── Portfolio.js   # 投资组合模型
-│   │   └── Trade.js       # 交易模型
-│   ├── routes/            # API路由
-│   │   └── api.js         # API路由定义
-│   ├── services/          # 核心服务
-│   │   ├── aiService.js   # AI服务
-│   │   ├── dataService.js # 数据服务
-│   │   ├── databaseService.js # 数据库服务
-│   │   └── tradingService.js # 交易服务
-│   ├── utils/             # 工具函数
-│   │   └── logger.js      # 日志工具
-│   ├── scripts/           # 脚本文件
-│   ├── __tests__/         # 测试文件
-│   └── index.js           # 应用入口
-├── data/                  # 数据文件
-│   └── market_data.db     # SQLite数据库文件
-├── .env                   # 环境变量配置文件
-├── .gitignore             # Git忽略文件
-├── package.json           # npm配置文件
-└── README.md              # 项目说明文档
+src/
+├── main/
+│   ├── java/com/noodle/app/
+│   │   ├── MainApplication.java          # 应用启动类
+│   │   └── trade/
+│   │       ├── api/controller/           # REST API控制器
+│   │       ├── model/                    # 数据模型
+│   │       ├── repository/               # 数据访问层
+│   │       ├── service/                  # 业务逻辑层
+│   │       └── utils/                    # 工具类
+│   └── resources/
+│       ├── templates/                    # Thymeleaf模板文件
+│       ├── application.yml               # 配置文件
+│       └── static/                       # 静态资源文件
+└── test/                                 # 测试代码
 ```
 
 ## 核心功能说明
@@ -165,110 +157,79 @@ HTTP_PROXY=http://proxy.example.com:8080
 - Ripple (XRP)
 - Dogecoin (DOGE)
 
-数据每30分钟自动更新并存储到本地SQLite数据库中。
+数据每30分钟自动更新并存储到MySQL数据库中。
 
 ### AI交易分析
 系统集成DeepSeek AI API，提供以下功能：
 - 市场趋势分析
 - 交易策略建议
 - 风险评估
+- 买卖信号生成
 
 ### 模拟交易
 - 支持买入/卖出操作
 - 实时账户余额和持仓管理
 - 交易手续费计算
 - 交易历史记录
+- 多账户管理
 
 ### 数据可视化
 - 实时市场数据展示
 - 账户信息展示
 - 交易历史记录
-- 性能分析图表
+- 持仓分布饼图
+- 账户总价值趋势图
+- 价格趋势图
 
 ## API 接口
 
-### 获取加密货币列表
-```http
-GET /api/coins
-```
+### 交易相关接口
+- `GET /api/trading/account/{accountName}` - 获取账户信息
+- `POST /api/trading/account/create` - 创建账户
+- `POST /api/trading/account/reset` - 重置账户
+- `DELETE /api/trading/account/{accountName}` - 删除账户
+- `POST /api/trading/trade/buy` - 买入交易
+- `POST /api/trading/trade/sell` - 卖出交易
 
-### 获取特定加密货币市场数据
-```http
-GET /api/market-data/:symbol
-```
+### 市场数据接口
+- `GET /api/trading/market-data` - 获取市场数据
+- `GET /api/trading/price/{symbol}` - 获取指定币种价格
 
-### 获取所有加密货币最新市场数据
-```http
-GET /api/market-data-all
-```
+### AI分析接口
+- `GET /api/trading/ai/strategy` - 获取AI交易策略
+- `GET /api/trading/ai/signal/{symbol}` - 获取指定币种交易信号
+- `GET /api/trading/ai/balance` - 获取AI账户余额信息
+- `GET /api/trading/ai/detailed-advice` - 获取详细的AI交易建议
+- `GET /api/trading/ai/specific-advice/{accountName}` - 获取针对特定账户的AI交易建议
 
-### 获取每种加密货币最新市场数据
-```http
-GET /api/latest-market-data
-```
-
-### 获取账户信息
-```http
-GET /api/account
-```
-
-### 执行交易
-```http
-POST /api/trade
-Content-Type: application/json
-
-{
-  "symbol": "bitcoin",
-  "type": "buy",
-  "quantity": 0.1,
-  "price": 50000
-}
-```
-
-### 启动模拟交易
-```http
-POST /api/simulation/start
-Content-Type: application/json
-
-{
-  "symbol": "bitcoin",
-  "interval": 60000
-}
-```
-
-### 停止模拟交易
-```http
-POST /api/simulation/stop
-```
+### 图表数据接口
+- `GET /api/charts/portfolio-distribution` - 获取持仓分布数据
+- `GET /api/charts/price-history` - 获取价格历史数据
+- `GET /api/charts/account-value-history` - 获取账户价值历史数据
 
 ## 定时任务
 
 系统配置了定时任务，每30分钟自动执行以下操作：
 1. 获取所有预设加密货币的最新市场数据
-2. 将数据存储到SQLite数据库
-3. 更新前端显示
+2. 将数据存储到MySQL数据库
+3. 更新账户总价值并存储历史记录
+4. 更新前端显示
 
 ## 时间处理
 
 所有时间显示均采用北京时间（UTC+8），确保用户看到的时间与本地时区一致。
 
-## 测试
-
-运行单元测试：
-```bash
-npm test
-```
-
 ## 部署
 
 ### 生产环境部署
 ```bash
-npm start
+mvn clean package
+java -jar target/noodle-gateway-1.0.0.jar
 ```
 
 ### 开发环境部署
 ```bash
-npm run dev
+mvn spring-boot:run
 ```
 
 ## 故障排除
@@ -277,16 +238,22 @@ npm run dev
 
 1. **无法获取市场数据**
    - 检查网络连接
-   - 配置代理设置
-   - 检查API密钥是否正确
+   - 确认Binance API可访问
+   - 检查数据库连接
 
 2. **数据库连接失败**
-   - 检查data目录权限
-   - 确保SQLite3已正确安装
+   - 检查MySQL服务是否启动
+   - 确认数据库配置正确
+   - 检查用户名和密码
 
 3. **端口被占用**
-   - 修改.env文件中的PORT配置
+   - 修改 `application.yml` 中的端口配置
    - 或停止占用端口的其他进程
+
+4. **AI功能不可用**
+   - 检查DeepSeek API密钥配置
+   - 确认网络可访问DeepSeek API
+   - 检查API余额是否充足
 
 ## 许可证
 
