@@ -1,0 +1,96 @@
+server:
+  port: 8083
+# 日志配置
+logging:
+  level:
+    com.noodle.app.collect.protocol: DEBUG
+    org.springframework.web: DEBUG
+    org.thymeleaf: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/server.log
+
+# 应用配置和数据库配置
+spring:
+  application:
+    name: noodle-server
+  profiles:
+    active: local
+  main:
+    allow-bean-definition-overriding: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+  mvc:
+    throw-exception-if-no-handler-found: false
+    static-path-pattern: "/static/**"
+  # 数据库配置 - 使用MySQL
+  datasource:
+    url: jdbc:mysql://localhost:3306/trade_coin?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 12345678
+    hikari:
+      connection-timeout: 60000
+      maximum-pool-size: 20
+      idle-timeout: 500000
+      max-lifetime: 540000
+      minimum-idle: 10
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        # 不使用 Hibernate 序列生成器
+        use-new-id-generator-mappings: false
+        # 确保使用正确的主键生成策略
+        globally_quoted_identifiers: false
+        id:
+          new_generator_mappings: false
+
+# DeepSeek AI 配置
+deepseek:
+  api:
+    key: sk-7ebb04afcba549dbbfcd9e17f1e6f52c  # 默认值为sk-1，生产环境应通过环境变量设置
+    url: https://api.deepseek.com/v1
+    model: deepseek-chat
+
+
+# RocketMQ配置
+rocketmq:
+  # ===========================================
+  # RocketMQ消息队列总开关
+  # true: 启用RocketMQ消息推送功能
+  # false: 禁用RocketMQ消息推送功能
+  # ===========================================
+  enabled: false  # 设置为true已启用，设置为false可禁用  
+  # Name Server地址（多个地址用分号分隔）
+  name-server: 127.0.0.1:19876  
+  # 报警主题名称
+  alarm-topic: alarm-topic
+  # 生产者配置
+  producer:
+    group: alarm-producer-group
+    send-message-timeout: 3000            # 发送消息超时时间(ms)
+    retry-times-when-send-failed: 2        # 同步发送失败重试次数
+    retry-times-when-send-async-failed: 2  # 异步发送失败重试次数
+    max-message-size: 4096                 # 消息最大大小(bytes)
+    compress-message-body-threshold: 4096  # 消息压缩阈值(bytes)
+  # 消费者配置
+  consumer:
+    group: alarm-consumer-group
+    consume-message-batch-max-size: 1  # 批量消费最大消息数
+    consume-timeout: 15                # 消费超时时间(分钟)
