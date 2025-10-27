@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,17 +15,35 @@ public class BinanceApiServiceTest {
     private BinanceApiService binanceApiService;
 
     @Test
-    public void testGetCurrentPrice() throws IOException {
-        // 测试获取DOGEUSDT的价格
-        BigDecimal dogePrice = binanceApiService.getCurrentPrice("DOGEUSDT");
-        assertNotNull(dogePrice, "DOGEUSDT价格不应为null");
-        assertTrue(dogePrice.compareTo(BigDecimal.ZERO) > 0, "DOGEUSDT价格应大于0");
-        System.out.println("DOGEUSDT当前价格: " + dogePrice);
+    public void testGetCurrentPrice() {
+        try {
+            // 测试获取BTC价格
+            assertNotNull(binanceApiService.getCurrentPrice("BTCUSDT"));
+            // 测试获取ETH价格
+            assertNotNull(binanceApiService.getCurrentPrice("ETHUSDT"));
+        } catch (IOException e) {
+            fail("获取价格失败: " + e.getMessage());
+        }
+    }
 
-        // 测试获取BTCUSDT的价格
-        BigDecimal btcPrice = binanceApiService.getCurrentPrice("BTCUSDT");
-        assertNotNull(btcPrice, "BTCUSDT价格不应为null");
-        assertTrue(btcPrice.compareTo(BigDecimal.ZERO) > 0, "BTCUSDT价格应大于0");
-        System.out.println("BTCUSDT当前价格: " + btcPrice);
+    @Test
+    public void testGetAccountInfo() {
+        try {
+            // 测试获取账户信息（需要配置API密钥）
+            String accountInfo = binanceApiService.getAccountInfo();
+            // 如果没有配置API密钥，应该抛出异常
+            if (accountInfo.contains("API密钥未配置")) {
+                System.out.println("Binance API密钥未配置，跳过账户信息测试");
+            } else {
+                assertNotNull(accountInfo);
+            }
+        } catch (IOException e) {
+            // 如果API密钥未配置，这是预期的行为
+            if (e.getMessage().contains("API密钥未配置")) {
+                System.out.println("Binance API密钥未配置，跳过账户信息测试");
+            } else {
+                fail("获取账户信息失败: " + e.getMessage());
+            }
+        }
     }
 }

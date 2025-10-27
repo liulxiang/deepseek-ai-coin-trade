@@ -74,17 +74,21 @@
    - 在 `src/main/resources/application.yml` 中配置API密钥，或
    - 通过环境变量 `DEEPSEEK_API_KEY` 设置
 
-4. 编译项目:
+4. 配置Binance API密钥（可选，用于真实交易）:
+   - 在 `src/main/resources/application.yml` 中配置API密钥，或
+   - 通过环境变量 `BINANCE_API_KEY` 和 `BINANCE_SECRET_KEY` 设置
+
+5. 编译项目:
    ```bash
    mvn clean compile
    ```
 
-5. 运行项目:
+6. 运行项目:
    ```bash
    mvn spring-boot:run
    ```
 
-6. 访问应用:
+7. 访问应用:
    打开浏览器访问 `http://localhost:8083`
 
 ## 配置说明
@@ -117,6 +121,28 @@ deepseek:
 1. 修改配置文件中的默认值
 2. 设置环境变量: `export DEEPSEEK_API_KEY=your_actual_api_key`
 3. 在启动时通过JVM参数传递: `-DDEEPSEEK_API_KEY=your_actual_api_key`
+
+### Binance API 配置
+在 `src/main/resources/application.yml` 中配置Binance API（用于真实交易）:
+
+```yaml
+# Binance API 配置
+binance:
+  api:
+    key: ${BINANCE_API_KEY:}  # Binance API Key，生产环境应通过环境变量设置
+    secret: ${BINANCE_SECRET_KEY:}  # Binance Secret Key，生产环境应通过环境变量设置
+    url: https://api.binance.com
+```
+
+可以通过以下方式设置API密钥：
+1. 修改配置文件中的默认值
+2. 设置环境变量: 
+   ```bash
+   export BINANCE_API_KEY=your_binance_api_key
+   export BINANCE_SECRET_KEY=your_binance_secret_key
+   ```
+3. 在启动时通过JVM参数传递: 
+   `-DBINANCE_API_KEY=your_binance_api_key -DBINANCE_SECRET_KEY=your_binance_secret_key`
 
 ### 服务器端口配置
 默认端口为8083，如需修改可在 `application.yml` 中配置:
@@ -254,6 +280,11 @@ mvn spring-boot:run
    - 检查DeepSeek API密钥配置
    - 确认网络可访问DeepSeek API
    - 检查API余额是否充足
+
+5. **Binance交易功能不可用**
+   - 检查Binance API密钥配置
+   - 确认网络可访问Binance API
+   - 检查API权限是否正确设置
 
 ## 许可证
 

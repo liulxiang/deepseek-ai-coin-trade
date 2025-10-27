@@ -2,14 +2,18 @@ package com.noodle.app.trade.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.noodle.app.trade.config.BinanceConfig;
 import com.noodle.app.trade.model.CryptoCurrency;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -20,6 +24,9 @@ public class BinanceApiService {
     
     private final OkHttpClient client = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    @Autowired
+    private BinanceConfig binanceConfig;
     
     // Binance API基础URL
     private static final String BASE_URL = "https://api.binance.com";
@@ -129,5 +136,208 @@ public class BinanceApiService {
             case "DOGE": return "Dogecoin";
             default: return symbol;
         }
+    }
+    
+    /**
+     * 生成签名
+     * @param data 需要签名的数据
+     * @return 签名
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     */
+    private String generateSignature(String data) throws NoSuchAlgorithmException, InvalidKeyException {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(binanceConfig.getSecret().getBytes(), "HmacSHA256");
+        mac.init(secretKeySpec);
+        byte[] hash = mac.doFinal(data.getBytes());
+        
+        StringBuilder hashString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hashString.append('0');
+            }
+            hashString.append(hex);
+        }
+        
+        return hashString.toString();
+    }
+    
+    /**
+     * 查询账户信息
+     * @return 账户信息JSON字符串
+     * @throws IOException
+     */
+    public String getAccountInfo() throws IOException {
+        // 检查API密钥是否配置
+        if (binanceConfig.getKey() == null || binanceConfig.getKey().isEmpty() || 
+            binanceConfig.getSecret() == null || binanceConfig.getSecret().isEmpty()) {
+            throw new IOException("Binance API密钥未配置");
+        }
+        
+        long timestamp = System.currentTimeMillis();
+        String params = "timestamp=" + timestamp;
+        
+        try {
+            String signature = generateSignature(params);
+            String url = binanceConfig.getUrl() + "/api/v3/account?" + params + "&signature=" + signature;
+            
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("X-MBX-APIKEY", binanceConfig.getKey())
+                    .build();
+            
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    return response.body().string();
+                } else if (response.body() != null) {
+                    throw new IOException("Binance API错误: " + response.body().string());
+                }
+            }
+        } catch (Exception e) {
+            throw new IOException("获取账户信息失败: " + e.getMessage(), e);
+        }
+        
+        throw new IOException("获取账户信息失败");
+    }
+    
+    /**
+     * 查询账户持仓
+     * @return 持仓信息JSON字符串
+     * @throws IOException
+     */
+    public String getAccountHoldings() throws IOException {
+        return getAccountInfo();
+    }
+    
+    /**
+     * 查询账户交易历史
+     * @param symbol 币种符号（可选）
+     * @param limit 返回记录数限制（可选，默认500）
+     * @return 交易历史记录JSON字符串
+     * @throws IOException
+     */
+    public String getTradeHistory(String symbol, Integer limit) throws IOException {
+        // 检查API密钥是否配置
+        if (binanceConfig.getKey() == null || binanceConfig.getKey().isEmpty() || 
+            binanceConfig.getSecret() == null || binanceConfig.getSecret().isEmpty()) {
+            throw new IOException("Binance API密钥未配置");
+        }
+        
+        long timestamp = System.currentTimeMillis();
+        StringBuilder paramsBuilder = new StringBuilder();
+        paramsBuilder.append("timestamp=").append(timestamp);
+        
+        if (symbol != null && !symbol.isEmpty()) {
+            paramsBuilder.append("&symbol=").append(symbol);
+        }
+        
+        if (limit != null && limit > 0) {
+            paramsBuilder.append("&limit=").append(limit);
+        }
+        
+        String params = paramsBuilder.toString();
+        
+        try {
+            String signature = generateSignature(params);
+            String url = binanceConfig.getUrl() + "/api/v3/myTrades?" + params + "&signature=" + signature;
+            
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("X-MBX-APIKEY", binanceConfig.getKey())
+                    .build();
+            
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    return response.body().string();
+                } else if (response.body() != null) {
+                    throw new IOException("Binance API错误: " + response.body().string());
+                }
+            }
+        } catch (Exception e) {
+            throw new IOException("获取交易历史失败: " + e.getMessage(), e);
+        }
+        
+        throw new IOException("获取交易历史失败");
+    }
+    
+    /**
+     * 下单交易（买入）
+     * @param symbol 币种符号
+     * @param quantity 购买数量
+     * @param price 价格（市价单可为null）
+     * @return 交易结果JSON字符串
+     * @throws IOException
+     */
+    public String placeBuyOrder(String symbol, BigDecimal quantity, BigDecimal price) throws IOException {
+        return placeOrder(symbol, "BUY", quantity, price);
+    }
+    
+    /**
+     * 下单交易（卖出）
+     * @param symbol 币种符号
+     * @param quantity 卖出数量
+     * @param price 价格（市价单可为null）
+     * @return 交易结果JSON字符串
+     * @throws IOException
+     */
+    public String placeSellOrder(String symbol, BigDecimal quantity, BigDecimal price) throws IOException {
+        return placeOrder(symbol, "SELL", quantity, price);
+    }
+    
+    /**
+     * 下单交易通用方法
+     * @param symbol 币种符号
+     * @param side 交易方向（BUY/SELL）
+     * @param quantity 数量
+     * @param price 价格（市价单可为null）
+     * @return 交易结果JSON字符串
+     * @throws IOException
+     */
+    private String placeOrder(String symbol, String side, BigDecimal quantity, BigDecimal price) throws IOException {
+        // 检查API密钥是否配置
+        if (binanceConfig.getKey() == null || binanceConfig.getKey().isEmpty() || 
+            binanceConfig.getSecret() == null || binanceConfig.getSecret().isEmpty()) {
+            throw new IOException("Binance API密钥未配置");
+        }
+        
+        long timestamp = System.currentTimeMillis();
+        StringBuilder paramsBuilder = new StringBuilder();
+        paramsBuilder.append("symbol=").append(symbol);
+        paramsBuilder.append("&side=").append(side);
+        paramsBuilder.append("&type=").append(price == null ? "MARKET" : "LIMIT");
+        paramsBuilder.append("&quantity=").append(quantity.toPlainString());
+        
+        if (price != null) {
+            paramsBuilder.append("&price=").append(price.toPlainString());
+            paramsBuilder.append("&timeInForce=GTC");
+        }
+        
+        paramsBuilder.append("&timestamp=").append(timestamp);
+        
+        String params = paramsBuilder.toString();
+        
+        try {
+            String signature = generateSignature(params);
+            String url = binanceConfig.getUrl() + "/api/v3/order?" + params + "&signature=" + signature;
+            
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("X-MBX-APIKEY", binanceConfig.getKey())
+                    .post(RequestBody.create(new byte[0], MediaType.parse("application/json")))
+                    .build();
+            
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful() && response.body() != null) {
+                    return response.body().string();
+                } else if (response.body() != null) {
+                    throw new IOException("Binance API错误: " + response.body().string());
+                }
+            }
+        } catch (Exception e) {
+            throw new IOException("下单失败: " + e.getMessage(), e);
+        }
+        
+        throw new IOException("下单失败");
     }
 }
