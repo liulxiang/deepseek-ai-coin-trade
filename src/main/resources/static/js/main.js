@@ -1,0 +1,940 @@
+let priceChart = null;
+let portfolioChart = null;
+let accountValueChart = null;
+
+// 全局变量存储当前账户名
+let currentAccountName = 'rich-account';
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    refreshAccountData();
+    refreshMarketData();
+    // refreshAIRecommendations();
+    refreshTradeHistory();
+    updatePriceChart();
+    updatePortfolioChart();
+    updateAccountValueChart();
+    refreshAIBalance(); // 初始化AI余额
+    
+    // 每30秒刷新一次数据
+    setInterval(refreshMarketData, 30000);
+    setInterval(refreshAccountData, 30000);
+    setInterval(refreshAIBalance, 30000); // 每30秒刷新AI余额
+    setInterval(updateCurrentTime, 1000);
+});
+
+// 切换账户
+function switchAccount() {
+    const accountSelect = document.getElementById('accountSelect');
+    currentAccountName = accountSelect.value;
+    refreshAccountData();
+    refreshTradeHistory();
+    updatePortfolioChart();
+    updateAccountValueChart();
+    refreshAIBalance(); // 切换账户时也刷新AI余额
+}
+
+// 更新当前时间（北京时间）
+function updateCurrentTime() {
+    const now = new Date();
+    // 转换为北京时间
+    const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    document.getElementById('currentTime').textContent = beijingTime.toISOString().replace('T', ' ').substring(0, 19);
+}
+
+// 获取并更新AI余额信息
+async function refreshAIBalance() {
+    try {
+        const response = await fetch('/api/trading/ai/balance');
+        const result = await response.json();
+        
+        if (result.success) {
+            // 解析返回的JSON数据
+            const balanceData = JSON.parse(result.data);
+            
+            if (balanceData.is_available && balanceData.balance_infos && balanceData.balance_infos.length > 0) {
+                const balanceInfo = balanceData.balance_infos[0];
+                document.getElementById('aiBalance').textContent = '¥' + parseFloat(balanceInfo.total_balance).toFixed(2);
+            } else {
+                document.getElementById('aiBalance').textContent = '¥0.00';
+            }
+        } else {
+            console.error('获取AI余额失败:', result.error);
+            document.getElementById('aiBalance').textContent = '获取失败';
+        }
+    } catch (error) {
+        console.error('获取AI余额失败:', error);
+        document.getElementById('aiBalance').textContent = '获取失败';
+    }
+}
+
+// 更新持仓表格
+async function updateHoldingsTable(account) {
+    const holdingsTableBody = document.getElementById('holdingsTableBody');
+    
+    // 清空现有内容
+    holdingsTableBody.innerHTML = '';
+    
+    // 如果没有持仓，显示提示信息
+    if (Object.keys(account.holdings).length === 0) {
+        holdingsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无持仓数据</td></tr>';
+        return;
+    }
+    
+    // 获取市场数据以计算持仓价值
+    try {
+        const marketResponse = await fetch('/api/trading/market-data');
+        const marketResult = await marketResponse.json();
+        const marketData = marketResult.success ? marketResult.data : [];
+        
+        // 创建币种价格映射
+        const priceMap = {};
+        for (const crypto of marketData) {
+            priceMap[crypto.symbol] = crypto.price;
+        }
+        
+        // 填充持仓数据
+        for (const [symbol, quantity] of Object.entries(account.holdings)) {
+            const currentPrice = priceMap[symbol] || 0;
+            const holdingValue = quantity * currentPrice;
+            const row = document.createElement('tr');
+            
+            // 计算盈亏（这里简化处理，实际应该根据买入成本计算）
+            const profitLoss = holdingValue - (quantity * currentPrice * 0.95); // 假设成本为基础价格的95%
+            const profitLossPercent = ((holdingValue / (quantity * currentPrice * 0.95)) - 1) * 100;
+            const profitLossClass = profitLoss >= 0 ? 'positive' : 'negative';
+            
+            row.innerHTML = `
+                <td><strong>${symbol}</strong></td>
+                <td>${quantity.toFixed(6)}</td>
+                <td>$${currentPrice.toFixed(4)}</td>
+                <td>$${holdingValue.toFixed(2)}</td>
+                <td class="${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)} (${profitLoss >= 0 ? '+' : ''}${profitLossPercent.toFixed(2)}%)</td>
+            `;
+            
+            holdingsTableBody.appendChild(row);
+        }
+    } catch (error) {
+        console.error('获取市场数据失败:', error);
+        // 如果无法获取市场数据，只显示基础持仓信息
+        for (const [symbol, quantity] of Object.entries(account.holdings)) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${symbol}</strong></td>
+                <td>${quantity.toFixed(6)}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            `;
+            holdingsTableBody.appendChild(row);
+        }
+    }
+}
+
+// 清空持仓表格
+function clearHoldingsTable() {
+    const holdingsTableBody = document.getElementById('holdingsTableBody');
+    holdingsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无持仓数据</td></tr>';
+}
+
+// 刷新账户数据
+async function refreshAccountData() {
+    try {
+        // 从API获取账户数据
+        const response = await fetch(`/api/trading/account/${currentAccountName}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const account = result.data;
+            // 格式化数字并更新显示
+            document.getElementById('accountBalance').textContent = '$' + account.balance.toFixed(2);
+            document.getElementById('accountValue').textContent = '$' + account.totalValue.toFixed(2);
+            document.getElementById('holdingCount').textContent = Object.keys(account.holdings).length;
+            
+            // 更新持仓表格
+            updateHoldingsTable(account);
+        } else {
+            console.error('获取账户数据失败:', result.error);
+            // 如果API失败，使用模拟数据
+            document.getElementById('accountBalance').textContent = '$0';
+            document.getElementById('accountValue').textContent = '$0';
+            document.getElementById('holdingCount').textContent = '0';
+            
+            // 清空持仓表格
+            clearHoldingsTable();
+        }
+        updateCurrentTime();
+        refreshAIBalance(); // 刷新AI余额
+    } catch (error) {
+        console.error('获取账户数据失败:', error);
+        // 如果发生异常，使用模拟数据
+        document.getElementById('accountBalance').textContent = '$0';
+        document.getElementById('accountValue').textContent = '$0';
+        document.getElementById('holdingCount').textContent = '0';
+        
+        // 清空持仓表格
+        clearHoldingsTable();
+        refreshAIBalance(); // 刷新AI余额
+    }
+}
+
+// 刷新市场数据
+async function refreshMarketData() {
+    try {
+        const response = await fetch('/api/trading/market-data');
+        const result = await response.json();
+        
+        if (result.success) {
+            updateMarketOverview(result.data);
+        } else {
+            console.error('获取市场数据失败:', result.error);
+            // 如果API失败，使用模拟数据
+            const marketData = [
+                {symbol: 'BTC', name: 'Bitcoin', price: 43250.20, change: 2.5, changePercent: 2.5},
+                {symbol: 'ETH', name: 'Ethereum', price: 2560.75, change: -1.2, changePercent: -1.2},
+                {symbol: 'BNB', name: 'Binance Coin', price: 315.80, change: 0.8, changePercent: 0.8},
+                {symbol: 'XRP', name: 'Ripple', price: 0.62, change: -0.5, changePercent: -0.5},
+                {symbol: 'DOGE', name: 'Dogecoin', price: 0.08, change: 3.2, changePercent: 3.2}
+            ];
+            updateMarketOverview(marketData);
+        }
+    } catch (error) {
+        console.error('获取市场数据失败:', error);
+        // 如果发生异常，使用模拟数据
+        const marketData = [
+            {symbol: 'BTC', name: 'Bitcoin', price: 43250.20, change: 2.5, changePercent: 2.5},
+            {symbol: 'ETH', name: 'Ethereum', price: 2560.75, change: -1.2, changePercent: -1.2},
+            {symbol: 'BNB', name: 'Binance Coin', price: 315.80, change: 0.8, changePercent: 0.8},
+            {symbol: 'XRP', name: 'Ripple', price: 0.62, change: -0.5, changePercent: -0.5},
+            {symbol: 'DOGE', name: 'Dogecoin', price: 0.08, change: 3.2, changePercent: 3.2}
+        ];
+        updateMarketOverview(marketData);
+    }
+}
+
+// 更新市场概览显示
+ // 更新市场概览
+        function updateMarketOverview(data) {
+            const container = document.getElementById('marketOverview');
+            
+            // 创建表格
+            let tableHTML = `
+                <table class="market-table">
+                    <thead>
+                        <tr>
+                            <th>币种</th>
+                            <th>名称</th>
+                            <th>当前价格</th>
+                            <th>24h变化</th>
+                            <th>24h变化%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            for (const currency of data) {
+                // 处理不同的数据格式
+                const symbol = currency.symbol;
+                const name = currency.name;
+                const price = currency.price;
+                // 处理change和changePercent字段的不同命名
+                const change = currency.change !== undefined ? currency.change : currency.priceChange;
+                const changePercent = currency.changePercent !== undefined ? currency.changePercent : currency.priceChangePercent;
+                
+                const changeClass = change >= 0 ? 'positive' : 'negative';
+                const changeSign = change >= 0 ? '+' : '';
+                
+                tableHTML += `
+                    <tr>
+                        <td><strong>${symbol}</strong></td>
+                        <td>${name}</td>
+                        <td>$${parseFloat(price).toFixed(4)}</td>
+                        <td class="${changeClass}">${changeSign}${parseFloat(change).toFixed(4)}</td>
+                        <td class="${changeClass}">${changeSign}${parseFloat(changePercent).toFixed(2)}%</td>
+                    </tr>
+                `;
+            }
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+}
+
+// 刷新交易历史
+async function refreshTradeHistory() {
+    try {
+        // 使用当前账户名
+        const response = await fetch('/api/trading/trade/history/' + currentAccountName);
+        const result = await response.json();
+        
+        if (result.success) {
+            updateTradeHistory(result.data);
+        } else {
+            console.error('获取交易历史失败:', result.error);
+            // 如果API失败，使用模拟数据
+            const trades = [
+               
+            ];
+            updateTradeHistory(trades);
+        }
+    } catch (error) {
+        console.error('获取交易历史失败:', error);
+        // 如果API失败，使用模拟数据
+        const trades = [
+        ];
+        updateTradeHistory(trades);
+    }
+}
+ // 更新交易历史显示
+        function updateTradeHistory(data) {
+            const container = document.getElementById('tradeHistory');
+            
+            if (data.length > 0) {
+                let tradeHtml = '';
+                for (const trade of data) {
+                    const typeClass = trade.tradeType === 'BUY' ? 'positive' : 'negative';
+                    const typeText = trade.tradeType === 'BUY' ? '买入' : '卖出';
+                    
+                    tradeHtml += `
+                        <div class="trade-item">
+                          
+                            <p><strong>${trade.tradeTime}</strong> &nbsp;&nbsp; ${trade.symbol} &nbsp;&nbsp;<span class="${typeClass}">${typeText}</span> ${trade.quantity}  = $${trade.amount.toFixed(2)}</p>
+                        </div>
+                    `;
+                }
+                container.innerHTML = tradeHtml;
+            } else {
+                container.innerHTML = '<div class="trade-item">暂无交易记录</div>';
+            }
+}
+// 更新价格图表
+async function updatePriceChart() {
+    const symbol = document.getElementById('currencySelect').value;
+    const days = document.getElementById('daysSelect').value;
+    
+    try {
+        // 销毁现有的图表
+        if (priceChart) {
+            priceChart.destroy();
+        }
+        
+        // 从API获取历史数据，注意API期望的是不带USDT后缀的符号
+        const apiSymbol = symbol; // API使用不带USDT的符号
+        const response = await fetch(`/api/charts/price-history?symbol=${apiSymbol}&days=${days}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const data = result.data;
+            
+            // 准备图表数据
+            const labels = [];
+            const prices = [];
+            const volumes = [];
+            
+            for (const point of data) {
+                // 解析时间并格式化
+                const time = new Date(point.time);
+                labels.push(time.toLocaleDateString());
+                prices.push(parseFloat(point.price));
+                volumes.push(parseFloat(point.volume));
+            }
+            
+            // 创建新图表
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${symbol} 价格`,
+                        data: prices,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y'
+                    }, {
+                        label: '交易量',
+                        data: volumes,
+                        borderColor: '#764ba2',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '价格 (USD)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '交易量'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error('获取价格图表数据失败:', result.error);
+        }
+    } catch (error) {
+        console.error('更新价格图表失败:', error);
+    }
+}
+
+// 更新持仓分布图表
+async function updatePortfolioChart() {
+    try {
+        // 销毁现有的图表
+        if (portfolioChart) {
+            portfolioChart.destroy();
+        }
+        
+        // 从API获取账户持仓分布数据
+        const response = await fetch('/api/charts/portfolio-distribution?accountName=' + currentAccountName);
+        const result = await response.json();
+        
+        console.log('持仓分布API返回数据:', result); // 添加调试日志
+        
+        if (result.success) {
+            const data = result.data;
+            
+            // 准备图表数据
+            const labels = [];
+            const values = [];
+            const backgroundColors = [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF',
+                '#FF9F40',
+                '#8AC926',
+                '#1982C4',
+                '#6A4C93',
+                '#F15BB5'
+            ];
+            
+            // 检查是否有数据
+            if (data.length === 0) {
+                console.log('没有持仓数据，显示默认图表');
+                createDefaultPortfolioChart();
+                return;
+            }
+            
+            for (let i = 0; i < data.length; i++) {
+                const point = data[i];
+                console.log('处理持仓数据:', point); // 添加调试日志
+                labels.push(point.symbol);
+                values.push(parseFloat(point.value));
+            }
+            
+            console.log('图表标签:', labels); // 添加调试日志
+            console.log('图表数值:', values); // 添加调试日志
+            
+            // 创建新图表
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            portfolioChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: backgroundColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: '持仓分布'
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error('获取持仓分布数据失败:', result.error);
+            // 如果API失败，使用模拟数据
+            createDefaultPortfolioChart();
+        }
+    } catch (error) {
+        console.error('更新持仓图表失败:', error);
+        // 如果API失败，使用模拟数据
+        createDefaultPortfolioChart();
+    }
+}
+
+// 创建默认持仓分布图表
+function createDefaultPortfolioChart() {
+    // 销毁现有的图表
+    if (portfolioChart) {
+        portfolioChart.destroy();
+    }
+    
+    // 创建默认图表
+    const ctx = document.getElementById('portfolioChart').getContext('2d');
+    portfolioChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['BTC', 'ETH', 'BNB', 'XRP', 'DOGE'],
+            datasets: [{
+                data: [30, 25, 20, 15, 10],
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: '持仓分布'
+                }
+            }
+        }
+    });
+}
+
+// 更新账户总价值图表
+async function updateAccountValueChart() {
+    const days = document.getElementById('valueDaysSelect').value;
+    
+    try {
+        // 销毁现有的图表
+        if (accountValueChart) {
+            accountValueChart.destroy();
+        }
+        
+        // 从API获取账户总价值历史数据
+        const response = await fetch(`/api/charts/account-value-history?accountName=${currentAccountName}&days=${days}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const data = result.data;
+            
+            // 准备图表数据
+            const labels = [];
+            const values = [];
+            
+            for (const point of data) {
+                // 解析时间并格式化
+                const time = new Date(point.time);
+                labels.push(time.toLocaleDateString());
+                values.push(parseFloat(point.value));
+            }
+            
+            // 创建新图表
+            const ctx = document.getElementById('accountValueChart').getContext('2d');
+            accountValueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '账户总价值',
+                        data: values,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '价值 (USD)'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error('获取账户总价值图表数据失败:', result.error);
+        }
+    } catch (error) {
+        console.error('更新账户总价值图表失败:', error);
+    }
+}
+
+// 设置币种符号
+function setSymbol(symbol) {
+    document.getElementById('symbolInput').value = symbol;
+}
+
+// 获取当前价格
+async function getCurrentPrice() {
+    const symbol = document.getElementById('symbolInput').value;
+    
+    if (!symbol) {
+        alert('请输入币种符号');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('priceResult');
+    resultDiv.innerHTML = '正在获取价格...';
+    
+    try {
+        const response = await fetch(`/api/trading/price/${symbol}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            resultDiv.innerHTML = `价格: $${result.data.price} <br>时间: ${new Date(result.data.time).toLocaleString()}`;
+            resultDiv.className = 'price-display';
+        } else {
+            resultDiv.innerHTML = `获取价格失败: ${result.error}`;
+            resultDiv.className = 'price-display';
+        }
+    } catch (error) {
+        console.error('获取价格失败:', error);
+        resultDiv.innerHTML = '获取价格失败，请稍后重试';
+        resultDiv.className = 'price-display';
+    }
+}
+
+// 刷新AI推荐
+async function refreshAIRecommendations() {
+    try {
+        const response = await fetch('/api/trading/ai/strategy');
+        const result = await response.json();
+        
+        if (result.success) {
+            // 渲染Markdown格式的AI建议
+            const renderedContent = renderMarkdown(result.data);
+            document.getElementById('aiRecommendations').innerHTML = '<div class="markdown-content">' + renderedContent + '</div>';
+        } else {
+            console.error('获取AI推荐失败:', result.error);
+            document.getElementById('aiRecommendations').innerHTML = '<p>获取AI交易建议失败，请稍后重试。</p>';
+        }
+    } catch (error) {
+        console.error('获取AI推荐失败:', error);
+        document.getElementById('aiRecommendations').innerHTML = '<p>获取AI交易建议失败，请稍后重试。</p>';
+    }
+}
+
+// 简单的Markdown渲染函数
+function renderMarkdown(markdown) {
+    if (!markdown) return '';
+    
+    let html = markdown;
+    
+    // 转换代码块 (```code```)
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // 转换行内代码 (`code`)
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // 转换引用块 (> quote)
+    html = html.replace(/^> (.*)$/gm, '<blockquote>$1</blockquote>');
+    
+    // 转换无序列表 (- item)
+    html = html.replace(/^\s*-\s+(.*)$/gm, '<li>$1</li>');
+    // 将连续的<li>包装在<ul>中
+    html = html.replace(/(<li>[\s\S]*?<\/li>)(?![\s\S]*?<li>)/g, '<ul>$1</ul>');
+    html = html.replace(/<\/ul>\s*<ul>/g, '');
+    
+    // 转换有序列表 (1. item)
+    html = html.replace(/^\s*\d+\.\s+(.*)$/gm, '<li>$1</li>');
+    // 将连续的<li>包装在<ol>中
+    html = html.replace(/(<li>[\s\S]*?<\/li>)(?![\s\S]*?<li>)/g, '<ol>$1</ol>');
+    html = html.replace(/<\/ol>\s*<ol>/g, '');
+    
+    // 转换链接 [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // 转换粗体 (**text**)
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // 转换斜体 (*text*)
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // 转换标题 (# Header)
+    html = html.replace(/^##### (.*$)/gm, '<h5>$1</h5>');
+    html = html.replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    
+    // 转换段落 (空行分隔)
+    html = html.replace(/\n\n/g, '</p><p>');
+    
+    // 转换换行符
+    html = html.replace(/\n/g, '<br>');
+    
+    // 包装在段落标签中（如果不是标题开头）
+    if (!html.match(/^<h[1-6]>/)) {
+        html = '<p>' + html + '</p>';
+    }
+    
+    // 清理多余的<br>标签
+    html = html.replace(/<br>\s*<\/p>/g, '</p>');
+    html = html.replace(/<p>\s*<br>/g, '<p>');
+    
+    return html;
+}
+
+// 重置账户
+async function resetAccount() {
+    const initialBalance = document.getElementById('resetBalance').value;
+    
+    if (!initialBalance || isNaN(initialBalance)) {
+        alert('请输入有效的初始余额');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/trading/account/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `accountName=${encodeURIComponent(currentAccountName)}&initialBalance=${encodeURIComponent(initialBalance)}`
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('账户重置成功');
+            refreshAccountData();
+            updatePortfolioChart();
+        } else {
+            alert('账户重置失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('重置账户失败:', error);
+        alert('账户重置失败，请稍后重试');
+    }
+}
+
+// 创建新账户
+async function createAccount() {
+    const accountName = document.getElementById('newAccountName').value.trim();
+    const initialBalance = document.getElementById('newAccountBalance').value;
+    
+    if (!accountName) {
+        alert('请输入账户名称');
+        return;
+    }
+    
+    if (!initialBalance || isNaN(initialBalance)) {
+        alert('请输入有效的初始余额');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/trading/account/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `accountName=${encodeURIComponent(accountName)}&initialBalance=${encodeURIComponent(initialBalance)}`
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('账户创建成功');
+            // 添加到账户选择列表
+            const accountSelect = document.getElementById('accountSelect');
+            const option = document.createElement('option');
+            option.value = accountName;
+            option.textContent = accountName;
+            accountSelect.appendChild(option);
+            // 切换到新创建的账户
+            accountSelect.value = accountName;
+            currentAccountName = accountName;
+            refreshAccountData();
+            refreshTradeHistory();
+            updatePortfolioChart();
+        } else {
+            alert('账户创建失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('创建账户失败:', error);
+        alert('账户创建失败，请稍后重试');
+    }
+}
+
+// 删除账户
+async function deleteAccount() {
+    if (currentAccountName === 'rich-account') {
+        if (!confirm('确定要删除默认账户 "rich-account" 吗？此操作不可恢复。')) {
+            return;
+        }
+    } else {
+        if (!confirm(`确定要删除账户 "${currentAccountName}" 吗？此操作不可恢复。`)) {
+            return;
+        }
+    }
+    
+    try {
+        const response = await fetch(`/api/trading/account/${currentAccountName}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('账户删除成功');
+            // 从账户选择列表中移除
+            const accountSelect = document.getElementById('accountSelect');
+            for (let i = 0; i < accountSelect.options.length; i++) {
+                if (accountSelect.options[i].value === currentAccountName) {
+                    accountSelect.remove(i);
+                    break;
+                }
+            }
+            // 切换到第一个账户（如果存在）
+            if (accountSelect.options.length > 0) {
+                accountSelect.selectedIndex = 0;
+                currentAccountName = accountSelect.value;
+                refreshAccountData();
+                refreshTradeHistory();
+                updatePortfolioChart();
+            } else {
+                // 如果没有账户了，重置显示
+                document.getElementById('accountBalance').textContent = '$0';
+                document.getElementById('accountValue').textContent = '$0';
+                document.getElementById('holdingCount').textContent = '0';
+                // 清空交易历史和持仓图表
+                document.getElementById('tradeHistory').innerHTML = '<div class="trade-item">暂无交易记录</div>';
+                createDefaultPortfolioChart();
+            }
+        } else {
+            alert('账户删除失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('删除账户失败:', error);
+        alert('账户删除失败，请稍后重试');
+    }
+}
+
+// 执行买入交易
+async function executeBuyTrade() {
+    const symbol = document.getElementById('tradeSymbol').value;
+    const quantity = document.getElementById('tradeQuantity').value;
+    const strategy = document.getElementById('tradeStrategy').value;
+    
+    // 验证输入
+    if (!quantity || isNaN(quantity) || parseFloat(quantity) <= 0) {
+        alert('请输入有效的交易数量');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('tradeResult');
+    resultDiv.innerHTML = '正在执行买入交易...';
+    
+    try {
+        const response = await fetch('/api/trading/trade/buy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `accountName=${encodeURIComponent(currentAccountName)}&symbol=${encodeURIComponent(symbol)}&quantity=${encodeURIComponent(quantity)}&strategy=${encodeURIComponent(strategy)}`
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            resultDiv.innerHTML = `买入成功！<br>币种: ${symbol}<br>数量: ${quantity}<br>价格: $${result.data.price}<br>金额: $${result.data.amount}`;
+            resultDiv.className = 'trade-result success';
+            // 刷新相关数据
+            refreshAccountData();
+            refreshTradeHistory();
+            updatePortfolioChart();
+        } else {
+            resultDiv.innerHTML = `买入失败: ${result.error}`;
+            resultDiv.className = 'trade-result error';
+        }
+    } catch (error) {
+        console.error('买入交易失败:', error);
+        resultDiv.innerHTML = '买入交易失败，请稍后重试';
+        resultDiv.className = 'trade-result error';
+    }
+}
+
+// 执行卖出交易
+async function executeSellTrade() {
+    const symbol = document.getElementById('tradeSymbol').value;
+    const quantity = document.getElementById('tradeQuantity').value;
+    const strategy = document.getElementById('tradeStrategy').value;
+    
+    // 验证输入
+    if (!quantity || isNaN(quantity) || parseFloat(quantity) <= 0) {
+        alert('请输入有效的交易数量');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('tradeResult');
+    resultDiv.innerHTML = '正在执行卖出交易...';
+    
+    try {
+        const response = await fetch('/api/trading/trade/sell', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `accountName=${encodeURIComponent(currentAccountName)}&symbol=${encodeURIComponent(symbol)}&quantity=${encodeURIComponent(quantity)}&strategy=${encodeURIComponent(strategy)}`
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            resultDiv.innerHTML = `卖出成功！<br>币种: ${symbol}<br>数量: ${quantity}<br>价格: $${result.data.price}<br>金额: $${result.data.amount}`;
+            resultDiv.className = 'trade-result success';
+            // 刷新相关数据
+            refreshAccountData();
+            refreshTradeHistory();
+            updatePortfolioChart();
+        } else {
+            resultDiv.innerHTML = `卖出失败: ${result.error}`;
+            resultDiv.className = 'trade-result error';
+        }
+    } catch (error) {
+        console.error('卖出交易失败:', error);
+        resultDiv.innerHTML = '卖出交易失败，请稍后重试';
+        resultDiv.className = 'trade-result error';
+    }
+}
+
+// 页面加载时自动获取DOGEUSDT价格作为示例
+window.addEventListener('load', function() {
+    setTimeout(getCurrentPrice, 1000); // 延迟1秒执行，确保API服务已启动
+});
