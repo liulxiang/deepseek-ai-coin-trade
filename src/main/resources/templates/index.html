@@ -248,13 +248,13 @@
         
         /* Markdown渲染样式 */
         .markdown-content {
-            line-height: 1.6;
-            font-size: 14px;
+            line-height: inherit;
+            font-size: 12px;
         }
         
         .markdown-content h1 {
             font-size: 24px;
-            margin: 20px 0 10px 0;
+            margin: 5px 0 10px 0;
             color: #333;
             border-bottom: 2px solid #667eea;
             padding-bottom: 5px;
@@ -262,7 +262,7 @@
         
         .markdown-content h2 {
             font-size: 20px;
-            margin: 18px 0 9px 0;
+            margin: 5px 0 9px 0;
             color: #444;
             border-bottom: 1px solid #ccc;
             padding-bottom: 3px;
@@ -270,24 +270,26 @@
         
         .markdown-content h3 {
             font-size: 18px;
-            margin: 16px 0 8px 0;
+            margin: 5px 0 8px 0;
             color: #555;
         }
         
         .markdown-content h4 {
             font-size: 16px;
-            margin: 14px 0 7px 0;
+            margin: 5px 0 7px 0;
             color: #666;
         }
         
         .markdown-content h5 {
             font-size: 15px;
-            margin: 12px 0 6px 0;
+            margin: 5px 0 6px 0;
             color: #777;
         }
-        
+        .markdown-content br {
+            display:none;
+        }
         .markdown-content p {
-            margin: 10px 0;
+            margin: 5px 0;
             text-align: justify;
         }
         
@@ -435,23 +437,19 @@
             </div>
         </div>
 
-        <div class="grid">
-            <div class="card">
+        <div class="card">
                 <h3>实时价格市场概览<button class="btn" onclick="refreshMarketData()">刷新</button></h3>
                 <div id="marketOverview">
                     <!-- 市场数据将在此处动态生成 -->
                 </div>
-            </div>
-
-            <div class="card">
-                <h3>AI交易建议 <button class="btn" onclick="refreshAIRecommendations()">刷新AI建议</button></h3>
+        </div>
+         <div class="card">
+                <h3>AI交易建议 <button class="btn" onclick="refreshAIRecommendations()">点击AI建议</button></h3>
                 <div id="aiRecommendations">
                     <p>AI交易建议功能</p>
-                    <p>当前显示的是默认消息。</p>
+                    <p>无，点击Deepseek Ai 给意见</p>
                 </div>
-                
-            </div>
-        </div>
+       </div>
 
         <div class="card">
             <h3>当前持仓情况</h3>

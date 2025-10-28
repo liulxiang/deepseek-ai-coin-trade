@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.noodle.app.trade.model.CryptoCurrency;
+
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 public class DeepSeekAiService {
     
@@ -125,8 +128,9 @@ public class DeepSeekAiService {
         try (Response response = client.newCall(request).execute()) {
             if (response.isSuccessful() && response.body() != null) {
                 String jsonData = response.body().string();
+                 log.info("DeepSeek AI回复: " + jsonData);
                 JsonNode jsonResponse = objectMapper.readTree(jsonData);
-                
+               
                 // 解析AI的回复
                 JsonNode choices = jsonResponse.get("choices");
                 if (choices != null && choices.size() > 0) {
