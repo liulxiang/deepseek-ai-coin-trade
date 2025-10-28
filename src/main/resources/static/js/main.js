@@ -933,8 +933,3 @@ async function executeSellTrade() {
         resultDiv.className = 'trade-result error';
     }
 }
-
-// 页面加载时自动获取DOGEUSDT价格作为示例
-window.addEventListener('load', function() {
-    setTimeout(getCurrentPrice, 1000); // 延迟1秒执行，确保API服务已启动
-});
