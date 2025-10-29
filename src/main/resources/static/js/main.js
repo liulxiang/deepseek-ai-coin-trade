@@ -71,13 +71,14 @@ async function refreshAIBalance() {
 // 更新持仓表格
 async function updateHoldingsTable(account) {
     const holdingsTableBody = document.getElementById('holdingsTableBody');
+    const holdingList = account.holdingList;
     
     // 清空现有内容
     holdingsTableBody.innerHTML = '';
     
     // 如果没有持仓，显示提示信息
-    if (Object.keys(account.holdings).length === 0) {
-        holdingsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无持仓数据</td></tr>';
+    if (!holdingList || holdingList.length === 0) {
+        holdingsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">暂无持仓数据</td></tr>';
         return;
     }
     
@@ -94,21 +95,26 @@ async function updateHoldingsTable(account) {
         }
         
         // 填充持仓数据
-        for (const [symbol, quantity] of Object.entries(account.holdings)) {
+        for (const holding of holdingList) {
+            const symbol = holding.symbol;
+            const quantity = holding.quantity;
+            const holdCost = holding.holdCost || 0; // 持币成本
+            
             const currentPrice = priceMap[symbol] || 0;
             const holdingValue = quantity * currentPrice;
-            const row = document.createElement('tr');
             
-            // 计算盈亏（这里简化处理，实际应该根据买入成本计算）
-            const profitLoss = holdingValue - (quantity * currentPrice * 0.95); // 假设成本为基础价格的95%
-            const profitLossPercent = ((holdingValue / (quantity * currentPrice * 0.95)) - 1) * 100;
+            // 计算盈亏
+            const profitLoss = holdingValue - holdCost;
+            const profitLossPercent = holdCost !== 0 ? ((holdingValue /holdCost) - 1) * 100 : 0;
             const profitLossClass = profitLoss >= 0 ? 'positive' : 'negative';
             
+            const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${symbol}</strong></td>
                 <td>${quantity.toFixed(6)}</td>
                 <td>$${currentPrice.toFixed(4)}</td>
                 <td>$${holdingValue.toFixed(2)}</td>
+                <td>$${holdCost.toFixed(4)}</td>
                 <td class="${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)} (${profitLoss >= 0 ? '+' : ''}${profitLossPercent.toFixed(2)}%)</td>
             `;
             
@@ -117,13 +123,18 @@ async function updateHoldingsTable(account) {
     } catch (error) {
         console.error('获取市场数据失败:', error);
         // 如果无法获取市场数据，只显示基础持仓信息
-        for (const [symbol, quantity] of Object.entries(account.holdings)) {
+        for (const holding of holdingList) {
+            const symbol = holding.symbol;
+            const quantity = holding.quantity;
+            const holdCost = holding.cost || 0;
+            
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${symbol}</strong></td>
                 <td>${quantity.toFixed(6)}</td>
                 <td>-</td>
                 <td>-</td>
+                <td>$${holdCost.toFixed(4)}</td>
                 <td>-</td>
             `;
             holdingsTableBody.appendChild(row);
@@ -655,7 +666,7 @@ function renderMarkdown(markdown) {
     
     let html = markdown;
     
-    // 转换代码块 (```code```)
+    // 转换代码块 (``code```)
     html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
     
     // 转换行内代码 (`code`)

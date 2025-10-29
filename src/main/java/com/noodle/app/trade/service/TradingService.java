@@ -135,6 +135,8 @@ public class TradingService {
                     System.out.println("Skipping invalid holding: " + holding);
                 }
             }
+            
+            account.setHoldingList(holdings);
         }
         
         System.out.println("Account creation completed");
@@ -168,7 +170,7 @@ public class TradingService {
         accountRepository.save(accountEntity);
         
         // 更新持仓
-        updateHolding(accountEntity.getId(), cryptoCurrency.getSymbol(), quantity);
+        updateHoldingAdd(accountEntity.getId(), cryptoCurrency.getSymbol(), quantity,amount);
         
         // 记录交易
         TradeRecordEntity tradeRecordEntity = new TradeRecordEntity(
@@ -226,7 +228,7 @@ public class TradingService {
         accountRepository.save(accountEntity);
         
         // 更新持仓
-        updateHolding(accountEntity.getId(), cryptoCurrency.getSymbol(), quantity.negate());
+        updateHoldingReduce(accountEntity.getId(), cryptoCurrency.getSymbol(), quantity,amount);
         
         // 记录交易
         TradeRecordEntity tradeRecordEntity = new TradeRecordEntity(
@@ -262,13 +264,14 @@ public class TradingService {
      * @param symbol 币种符号
      * @param quantity 变化数量（正数表示增加，负数表示减少）
      */
-    private void updateHolding(Long accountId, String symbol, BigDecimal quantity) {
+    private void updateHoldingAdd(Long accountId, String symbol, BigDecimal quantity,BigDecimal holdCost) {
         Optional<HoldingEntity> holdingOptional = holdingRepository.findByAccountIdAndSymbol(accountId, symbol);
         
         if (holdingOptional.isPresent()) {
             // 更新现有持仓
             HoldingEntity holding = holdingOptional.get();
             BigDecimal newQuantity = holding.getQuantity().add(quantity);
+            BigDecimal newHoldCost = holding.getHoldCost().add(holdCost);
             
             if (newQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 // 如果持仓为0或负数，则删除持仓记录
@@ -276,15 +279,43 @@ public class TradingService {
             } else {
                 // 更新持仓数量
                 holding.setQuantity(newQuantity);
+                holding.setHoldCost(newHoldCost);
                 holdingRepository.save(holding);
             }
         } else {
             // 创建新持仓
             if (quantity.compareTo(BigDecimal.ZERO) > 0) {
                 HoldingEntity holding = new HoldingEntity(accountId, symbol, quantity);
+                holding.setHoldCost(holdCost);
                 holdingRepository.save(holding);
             }
         }
+    }
+    /**
+     * 更新持仓
+     * @param accountId 账户ID
+     * @param symbol 币种符号
+     * @param quantity 变化数量（正数表示增加，负数表示减少）
+     */
+    private void updateHoldingReduce(Long accountId, String symbol, BigDecimal quantity,BigDecimal holdCost) {
+    	Optional<HoldingEntity> holdingOptional = holdingRepository.findByAccountIdAndSymbol(accountId, symbol);
+    	
+    	if (holdingOptional.isPresent()) {
+    		// 更新现有持仓
+    		HoldingEntity holding = holdingOptional.get();
+    		BigDecimal newQuantity = holding.getQuantity().subtract(quantity);
+    		BigDecimal newHoldCost = holding.getHoldCost().subtract(holdCost);
+    		
+    		if (newQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+    			// 如果持仓为0或负数，则删除持仓记录
+    			holdingRepository.delete(holding);
+    		} else {
+    			// 更新持仓数量
+    			holding.setQuantity(newQuantity);
+    			holding.setHoldCost(newHoldCost);
+    			holdingRepository.save(holding);
+    		}
+    	} 
     }
     
     /**

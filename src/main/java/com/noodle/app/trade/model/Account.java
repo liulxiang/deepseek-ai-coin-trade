@@ -2,7 +2,10 @@ package com.noodle.app.trade.model;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.noodle.app.trade.entity.HoldingEntity;
 
 public class Account {
     private Long id;
@@ -11,6 +14,7 @@ public class Account {
     private Map<String, BigDecimal> holdings; // 持仓信息，key为币种符号，value为持有数量
     private BigDecimal totalValue; // 账户总价值
     
+    private  List<HoldingEntity> holdingList;
     // 构造函数
     public Account() {
         this.holdings = new HashMap<>();
@@ -87,4 +91,12 @@ public class Account {
     public void setTotalValue(BigDecimal totalValue) {
         this.totalValue = totalValue;
     }
+
+	public List<HoldingEntity> getHoldingList() {
+		return holdingList;
+	}
+
+	public void setHoldingList(List<HoldingEntity> holdingList) {
+		this.holdingList = holdingList;
+	}
 }

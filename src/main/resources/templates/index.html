@@ -187,7 +187,7 @@
             color: #f44336;
         }
         .trade-history {
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
         }
         .trade-item {
@@ -401,7 +401,7 @@
         </div>
 
         <div class="card">
-            <h3>账户概览 </h3>
+            <h3>账户概览  <span style="float: right;">  <strong>AI余额(CNY):</strong> <span id="aiBalance">-</span></span></h3>
             <div class="info-grid" id="accountOverview">
                 <div class="info-item">
                     <strong>账户余额:</strong> <span id="accountBalance">-</span>
@@ -411,9 +411,6 @@
                 </div>
                 <div class="info-item">
                     <strong>持仓币种:</strong> <span id="holdingCount">-</span>
-                </div>
-                <div class="info-item">
-                    <strong>AI余额(CNY):</strong> <span id="aiBalance">-</span>
                 </div>
                 <div class="info-item">
                     <strong>当前时间:</strong> <span id="currentTime">-</span>
@@ -438,16 +435,15 @@
         </div>
 
         <div class="card">
-                <h3>实时价格市场概览<button class="btn" onclick="refreshMarketData()">刷新</button></h3>
+                <h3>实时价格市场概览<button class="btn" onclick="refreshMarketData()" style="float: right;">刷新</button></h3>
                 <div id="marketOverview">
                     <!-- 市场数据将在此处动态生成 -->
                 </div>
         </div>
          <div class="card">
-                <h3>AI交易建议 <button class="btn" onclick="refreshAIRecommendations()">点击AI建议</button></h3>
+                <h3>AI交易建议 <button class="btn" onclick="refreshAIRecommendations()" style="float: right;">点击AI建议</button></h3>
                 <div id="aiRecommendations">
-                    <p>AI交易建议功能</p>
-                    <p>无，点击Deepseek Ai 给意见</p>
+                    <p style="width: 100%;text-align: center;">无，点击Deepseek Ai 给意见</p>
                 </div>
        </div>
 
@@ -461,6 +457,7 @@
                             <th>持仓数量</th>
                             <th>当前价格</th>
                             <th>持仓价值</th>
+                            <th>购入成本</th>
                             <th>盈亏情况</th>
                         </tr>
                     </thead>
@@ -499,7 +496,7 @@
               <div id="tradeResult" class="trade-result"></div>
         </div>
         <div class="card">
-            <h3>账户总价值趋势 <button class="btn" onclick="updateAccountValueChart()">刷新图表</button></h3>
+            <h3>账户总价值趋势 <button class="btn" onclick="updateAccountValueChart()" style="float: right;">刷新图表</button></h3>
             <div class="chart-container">
                 <canvas id="accountValueChart"></canvas>
             </div>
@@ -538,8 +535,8 @@
 
         <div class="grid">
             <div class="card">
-                <h3>交易历史 <button class="btn" onclick="refreshTradeHistory()">刷新交易历史</button></h3>
-                <div class="trade-history" id="tradeHistory">
+                <h3>交易历史 <button class="btn" onclick="refreshTradeHistory()" style="float: right;">刷新交易历史</button></h3>
+                <div class="trade-history" id="tradeHistory" style="width: 100%;height: 100%;">
                     <div class="trade-item">暂无交易记录</div>
                 </div>
                 

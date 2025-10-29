@@ -20,6 +20,9 @@ public class HoldingEntity {
     @Column(name = "quantity", precision = 20, scale = 10)
     private BigDecimal quantity;
     
+    @Column(name = "hold_cost", precision = 20, scale = 10)
+    private BigDecimal holdCost;
+    
     // Constructors
     public HoldingEntity() {}
     
@@ -61,4 +64,12 @@ public class HoldingEntity {
     public void setQuantity(BigDecimal quantity) {
         this.quantity = quantity;
     }
+
+	public BigDecimal getHoldCost() {
+		return holdCost;
+	}
+
+	public void setHoldCost(BigDecimal holdCost) {
+		this.holdCost = holdCost;
+	}
 }
