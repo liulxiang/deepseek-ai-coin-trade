@@ -6,9 +6,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.noodle.app.trade.model.CryptoCurrency;
 
+import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.integration.support.json.JacksonJsonUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -115,7 +117,7 @@ public class DeepSeekAiService {
         messages.add(message);
         requestBody.set("messages", messages);
         requestBody.put("temperature", 0.7);
-        
+        log.info("DeepSeek AI问: " + JSONUtil.toJsonStr(requestBody));
         // 创建请求
         Request request = new Request.Builder()
                 .url(baseUrl + "/chat/completions")

@@ -21,10 +21,6 @@ public class MainApplication {
         // 启动Spring Boot应用
         SpringApplication app = new SpringApplication(MainApplication.class);
         // 设置默认配置文件
-        java.util.Properties defaultProperties = new java.util.Properties();
-        defaultProperties.put("spring.application.name", "noodle-gateway");
-        defaultProperties.put("server.port", "8080");
-        app.setDefaultProperties(defaultProperties);
         app.run(args);
     }
 }
