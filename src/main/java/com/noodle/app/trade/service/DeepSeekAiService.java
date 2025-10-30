@@ -117,7 +117,7 @@ public class DeepSeekAiService {
         messages.add(message);
         requestBody.set("messages", messages);
         requestBody.put("temperature", 0.7);
-        log.info("DeepSeek AI问: " + JSONUtil.toJsonStr(requestBody));
+        log.info("DeepSeek AI问: " + JSONUtil.toJsonStr(messages));
         // 创建请求
         Request request = new Request.Builder()
                 .url(baseUrl + "/chat/completions")
