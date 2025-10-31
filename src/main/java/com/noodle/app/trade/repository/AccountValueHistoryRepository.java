@@ -1,11 +1,12 @@
 package com.noodle.app.trade.repository;
 
-import com.noodle.app.trade.entity.AccountValueHistory;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.noodle.app.trade.entity.AccountValueHistory;
 
 @Repository
 public interface AccountValueHistoryRepository extends JpaRepository<AccountValueHistory, Long> {

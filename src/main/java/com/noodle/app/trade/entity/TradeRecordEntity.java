@@ -1,10 +1,17 @@
 package com.noodle.app.trade.entity;
 
-import com.noodle.app.trade.config.LocalDateTimeConverter;
-
-import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import com.noodle.app.trade.config.LocalDateTimeConverter;
 
 @Entity
 @Table(name = "trade_record")

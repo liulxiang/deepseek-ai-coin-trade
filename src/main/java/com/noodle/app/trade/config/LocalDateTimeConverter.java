@@ -1,10 +1,11 @@
 package com.noodle.app.trade.config;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
 
 @Converter(autoApply = true)
 public class LocalDateTimeConverter implements AttributeConverter<LocalDateTime, Long> {

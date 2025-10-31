@@ -1,5 +1,13 @@
 package com.noodle.app.trade.service;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -8,16 +16,11 @@ import com.noodle.app.trade.model.CryptoCurrency;
 
 import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.*;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.integration.support.json.JacksonJsonUtils;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 @Slf4j
 @Service
@@ -117,7 +120,8 @@ public class DeepSeekAiService {
         messages.add(message);
         requestBody.set("messages", messages);
         requestBody.put("temperature", 0.7);
-        log.info("DeepSeek AI问: " + JSONUtil.toJsonStr(messages));
+        log.info("DeepSeek AI问: " + prompt.toString());
+        System.out.println("DeepSeek AI问: " + prompt.toString());
         // 创建请求
         Request request = new Request.Builder()
                 .url(baseUrl + "/chat/completions")

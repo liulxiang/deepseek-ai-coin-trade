@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 每30秒刷新一次数据
     setInterval(refreshMarketData, 30000);
     setInterval(refreshAccountData, 30000);
-    setInterval(refreshAIBalance, 30000); // 每30秒刷新AI余额
     setInterval(updateCurrentTime, 1000);
 });
 
@@ -31,7 +30,6 @@ function switchAccount() {
     refreshTradeHistory();
     updatePortfolioChart();
     updateAccountValueChart();
-    refreshAIBalance(); // 切换账户时也刷新AI余额
 }
 
 // 更新当前时间（北京时间）
@@ -654,6 +652,7 @@ async function refreshAIRecommendations() {
             console.error('获取AI推荐失败:', result.error);
             document.getElementById('aiRecommendations').innerHTML = '<p>获取AI交易建议失败，请稍后重试。</p>';
         }
+		refreshAIBalance();
     } catch (error) {
         console.error('获取AI推荐失败:', error);
         document.getElementById('aiRecommendations').innerHTML = '<p>获取AI交易建议失败，请稍后重试。</p>';

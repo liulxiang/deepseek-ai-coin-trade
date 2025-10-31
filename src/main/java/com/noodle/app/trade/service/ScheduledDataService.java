@@ -1,5 +1,14 @@
 package com.noodle.app.trade.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
 import com.noodle.app.trade.entity.AccountEntity;
 import com.noodle.app.trade.entity.AccountValueHistory;
 import com.noodle.app.trade.entity.CryptoCurrencyEntity;
@@ -10,14 +19,6 @@ import com.noodle.app.trade.repository.AccountValueHistoryRepository;
 import com.noodle.app.trade.repository.CryptoCurrencyRepository;
 import com.noodle.app.trade.repository.HoldingRepository;
 import com.noodle.app.trade.util.TimeUtils;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class ScheduledDataService {

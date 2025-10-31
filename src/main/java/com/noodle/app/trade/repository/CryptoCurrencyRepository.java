@@ -1,11 +1,12 @@
 package com.noodle.app.trade.repository;
 
-import com.noodle.app.trade.entity.CryptoCurrencyEntity;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.noodle.app.trade.entity.CryptoCurrencyEntity;
 
 @Repository
 public interface CryptoCurrencyRepository extends JpaRepository<CryptoCurrencyEntity, Long> {

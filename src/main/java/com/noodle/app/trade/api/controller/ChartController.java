@@ -1,5 +1,19 @@
 package com.noodle.app.trade.api.controller;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.noodle.app.trade.entity.AccountEntity;
 import com.noodle.app.trade.entity.AccountValueHistory;
 import com.noodle.app.trade.entity.CryptoCurrencyEntity;
@@ -8,21 +22,6 @@ import com.noodle.app.trade.repository.AccountRepository;
 import com.noodle.app.trade.repository.AccountValueHistoryRepository;
 import com.noodle.app.trade.repository.CryptoCurrencyRepository;
 import com.noodle.app.trade.repository.HoldingRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/charts")
