@@ -64,7 +64,7 @@ spring:
 # DeepSeek AI 配置
 deepseek:
   api:
-    key: ${DEEPSEEK_API_KEY:sk-1}  # 默认值为sk-1，生产环境应通过环境变量设置
+    key: sk-  # 默认值为sk-，生产环境应通过环境变量设置
     url: https://api.deepseek.com/v1
     model: deepseek-chat
 
@@ -74,6 +74,18 @@ binance:
     key: ${BINANCE_API_KEY:}  # Binance API Key，生产环境应通过环境变量设置
     secret: ${BINANCE_SECRET_KEY:}  # Binance Secret Key，生产环境应通过环境变量设置
     url: https://api.binance.com
+
+# 代理配置
+proxy:
+  # HTTP代理配置
+  http-host: 
+  http-port: 7890
+  # HTTPS代理配置
+  https-host: 
+  https-port: 7890
+  # 代理认证配置
+  username: ${PROXY_USERNAME:}
+  password: ${PROXY_PASSWORD:}
 
 # RocketMQ配置
 rocketmq:

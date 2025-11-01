@@ -2,6 +2,8 @@ package com.noodle.app.trade.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -18,25 +20,71 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.noodle.app.trade.config.BinanceConfig;
+import com.noodle.app.trade.config.ProxyConfig;
 import com.noodle.app.trade.model.CryptoCurrency;
 
+import lombok.extern.slf4j.Slf4j;
+import okhttp3.Authenticator;
+import okhttp3.Credentials;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
+import okhttp3.Route;
+@Slf4j
 @Service
 public class BinanceApiService {
     
-    private final OkHttpClient client = new OkHttpClient();
+    private OkHttpClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Autowired
     private BinanceConfig binanceConfig;
     
+    @Autowired
+    private ProxyConfig proxyConfig;
+    
     // Binance API基础URL
     private static final String BASE_URL = "https://api.binance.com";
+    
+    public BinanceApiService() {
+        // 构造函数中不初始化client，避免依赖未注入的问题
+    }
+    /**
+     * 初始化OkHttpClient，支持代理配置
+     * 在所有依赖注入完成后调用
+     */
+    @Autowired
+    public void initializeHttpClient() {
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        log.info("=========proxyConfig===getHttpHost====="+proxyConfig.getHttpHost());
+        log.info("=========proxyConfig========"+proxyConfig.isHttpProxyConfigured());
+        log.info("=========proxyConfig====getHttpPort===="+proxyConfig.getHttpPort());
+        // 配置代理
+        if (proxyConfig != null && proxyConfig.isHttpProxyConfigured()) {
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, 
+                new InetSocketAddress(proxyConfig.getHttpHost(), proxyConfig.getHttpPort()));
+            builder.proxy(proxy);
+            log.info("=========proxyConfig========"+proxyConfig.getHttpHost());
+            // 如果配置了代理认证
+            if (proxyConfig.getUsername() != null && !proxyConfig.getUsername().isEmpty() &&
+                proxyConfig.getPassword() != null && !proxyConfig.getPassword().isEmpty()) {
+                Authenticator proxyAuthenticator = new Authenticator() {
+                    @Override
+                    public Request authenticate(Route route, Response response) throws IOException {
+                        String credential = Credentials.basic(proxyConfig.getUsername(), proxyConfig.getPassword());
+                        return response.request().newBuilder()
+                                .header("Proxy-Authorization", credential)
+                                .build();
+                    }
+                };
+                builder.proxyAuthenticator(proxyAuthenticator);
+            }
+        }
+        
+        this.client = builder.build();
+    }
     
     /**
      * 获取指定币种的当前价格
@@ -44,6 +92,11 @@ public class BinanceApiService {
      * @return 当前价格
      */
     public BigDecimal getCurrentPrice(String symbol) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         String url = BASE_URL + "/api/v3/ticker/price?symbol=" + symbol;
         Request request = new Request.Builder()
                 .url(url)
@@ -65,6 +118,11 @@ public class BinanceApiService {
      * @return 加密货币市场数据列表
      */
     public List<CryptoCurrency> getMarketData(List<String> symbols) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         List<CryptoCurrency> cryptoCurrencies = new ArrayList<>();
         
         for (String symbol : symbols) {
@@ -176,6 +234,11 @@ public class BinanceApiService {
      * @throws IOException
      */
     public String getAccountInfo() throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 检查API密钥是否配置
         if (binanceConfig.getKey() == null || binanceConfig.getKey().isEmpty() || 
             binanceConfig.getSecret() == null || binanceConfig.getSecret().isEmpty()) {
@@ -225,6 +288,11 @@ public class BinanceApiService {
      * @throws IOException
      */
     public String getTradeHistory(String symbol, Integer limit) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 检查API密钥是否配置
         if (binanceConfig.getKey() == null || binanceConfig.getKey().isEmpty() || 
             binanceConfig.getSecret() == null || binanceConfig.getSecret().isEmpty()) {
@@ -302,6 +370,11 @@ public class BinanceApiService {
      * @throws IOException
      */
     private String placeOrder(String symbol, String side, BigDecimal quantity, BigDecimal price) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 检查API密钥是否配置
         if (binanceConfig.getKey() == null || binanceConfig.getKey().isEmpty() || 
             binanceConfig.getSecret() == null || binanceConfig.getSecret().isEmpty()) {

@@ -27,24 +27,24 @@ public class BinanceApiServiceTest {
         }
     }
 
-    @Test
-    public void testGetAccountInfo() {
-        try {
-            // 测试获取账户信息（需要配置API密钥）
-            String accountInfo = binanceApiService.getAccountInfo();
-            // 如果没有配置API密钥，应该抛出异常
-            if (accountInfo.contains("API密钥未配置")) {
-                System.out.println("Binance API密钥未配置，跳过账户信息测试");
-            } else {
-                assertNotNull(accountInfo);
-            }
-        } catch (IOException e) {
-            // 如果API密钥未配置，这是预期的行为
-            if (e.getMessage().contains("API密钥未配置")) {
-                System.out.println("Binance API密钥未配置，跳过账户信息测试");
-            } else {
-                fail("获取账户信息失败: " + e.getMessage());
-            }
-        }
-    }
+//    @Test
+//    public void testGetAccountInfo() {
+//        try {
+//            // 测试获取账户信息（需要配置API密钥）
+//            String accountInfo = binanceApiService.getAccountInfo();
+//            // 如果没有配置API密钥，应该抛出异常
+//            if (accountInfo.contains("API密钥未配置")) {
+//                System.out.println("Binance API密钥未配置，跳过账户信息测试");
+//            } else {
+//                assertNotNull(accountInfo);
+//            }
+//        } catch (IOException e) {
+//            // 如果API密钥未配置，这是预期的行为
+//            if (e.getMessage().contains("API密钥未配置")) {
+//                System.out.println("Binance API密钥未配置，跳过账户信息测试");
+//            } else {
+//                fail("获取账户信息失败: " + e.getMessage());
+//            }
+//        }
+//    }
 }

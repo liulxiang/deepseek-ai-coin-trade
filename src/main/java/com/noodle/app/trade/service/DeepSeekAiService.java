@@ -1,10 +1,13 @@
 package com.noodle.app.trade.service;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -12,21 +15,25 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.noodle.app.trade.config.ProxyConfig;
 import com.noodle.app.trade.model.CryptoCurrency;
 
 import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Authenticator;
+import okhttp3.Credentials;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.Route;
 
 @Slf4j
 @Service
 public class DeepSeekAiService {
     
-    private final OkHttpClient client;
+    private OkHttpClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     // 从配置文件读取DeepSeek API配置
@@ -39,13 +46,46 @@ public class DeepSeekAiService {
     @Value("${deepseek.api.model}")
     private String model;
     
+    @Autowired
+    private ProxyConfig proxyConfig;
+    
     public DeepSeekAiService() {
-        // 配置OkHttpClient超时设置
-        this.client = new OkHttpClient.Builder()
+        // 在构造函数中不初始化client，避免依赖未注入的问题
+    }
+    
+    /**
+     * 初始化OkHttpClient，支持代理配置
+     */
+    @Autowired
+    public void initializeHttpClient() {
+        OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .build();
+                .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS);
+        
+        // 配置代理
+        if (proxyConfig != null && proxyConfig.isHttpsProxyConfigured()) {
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, 
+                new InetSocketAddress(proxyConfig.getHttpsHost(), proxyConfig.getHttpsPort()));
+            builder.proxy(proxy);
+            
+            // 如果配置了代理认证
+            if (proxyConfig.getUsername() != null && !proxyConfig.getUsername().isEmpty() &&
+                proxyConfig.getPassword() != null && !proxyConfig.getPassword().isEmpty()) {
+                Authenticator proxyAuthenticator = new Authenticator() {
+                    @Override
+                    public Request authenticate(Route route, Response response) throws IOException {
+                        String credential = Credentials.basic(proxyConfig.getUsername(), proxyConfig.getPassword());
+                        return response.request().newBuilder()
+                                .header("Proxy-Authorization", credential)
+                                .build();
+                    }
+                };
+                builder.proxyAuthenticator(proxyAuthenticator);
+            }
+        }
+        
+        this.client = builder.build();
     }
     
     /**
@@ -53,6 +93,11 @@ public class DeepSeekAiService {
      * @return API余额信息JSON字符串，如果获取失败返回错误信息
      */
     public String getDeepSeekAiBalance(){
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         try {
             // 创建GET请求（GET请求不应该有请求体）
             Request request = new Request.Builder()
@@ -86,6 +131,11 @@ public class DeepSeekAiService {
      * @return 交易策略建议
      */
     public String analyzeMarketData(List<CryptoCurrency> cryptoCurrencies) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 构建发送给DeepSeek AI的提示
         StringBuilder prompt = new StringBuilder();
         prompt.append("你是一个专业的加密货币交易分析师，请根据以下市场数据提供交易策略建议：\n\n");
@@ -157,6 +207,11 @@ public class DeepSeekAiService {
      * @return 交易信号（BUY, SELL, HOLD）
      */
     public String generateTradingSignal(CryptoCurrency cryptoCurrency) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 构建发送给DeepSeek AI的提示
         StringBuilder prompt = new StringBuilder();
         prompt.append("作为一个AI交易助手，请根据以下加密货币数据生成一个交易信号：\n\n");
@@ -221,6 +276,11 @@ public class DeepSeekAiService {
      * @return 包含每个币种交易建议的详细分析
      */
     public String generateDetailedTradingAdvice(List<CryptoCurrency> cryptoCurrencies) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 构建发送给DeepSeek AI的提示
         StringBuilder prompt = new StringBuilder();
         prompt.append("你是一个专业的加密货币交易分析师，请根据以下市场数据为每个币种提供详细的交易建议：\n\n");
@@ -297,6 +357,11 @@ public class DeepSeekAiService {
     public String generateSpecificTradingAdvice(List<CryptoCurrency> cryptoCurrencies, 
                                               Map<String, Double> accountHoldings, 
                                               double availableBalance) throws IOException {
+        // 确保client已初始化
+        if (client == null) {
+            initializeHttpClient();
+        }
+        
         // 构建发送给DeepSeek AI的提示
         StringBuilder prompt = new StringBuilder();
         prompt.append("你是一个专业的加密货币交易分析师，请根据以下信息为每个币种提供具体的交易建议：\n\n");
